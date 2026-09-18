@@ -1,263 +1,281 @@
-body {
-  font-family: Arial, sans-serif;
-  margin: 20px;
-  background: #c3ce7a;
+let employees = [];
+let filteredEmployees = [];
+
+// 1. API Requirement
+// =======================
+function fetchEmployees() {
+    document.getElementById("employees").innerHTML = "Loading employees...";
+    
+    fetch("https://dummyjson.com/users")
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log("Data loaded successfully:", data);
+            
+            // Store users inside an array
+            employees = data.users.map((user) => ({
+                id: user.id,
+                name: user.firstName + " " + user.lastName,
+                age: user.age,
+                email: user.email,
+                department: empDepartment(user.company.department),
+                phone: user.phone,
+                image: user.image,
+                salary: Math.floor(Math.random() * 50000) + 30000,
+            }));
+
+            //  Initialize filtered list so features work on page load
+            filteredEmployees = [...employees];
+
+            // Display all employees initially
+            displayEmployees(employees);
+            salaryDashboard(employees);
+            updateEmployeeCount(employees);
+        })
+        .catch(error => {
+            console.error(error);
+            document.getElementById("employees").innerHTML = "Unable to load employee data.<br>Please Try again";
+        })
+        .finally(() => {
+            console.log("API call finished");
+        });
 }
 
+// Employee Department
+function empDepartment(department) {
+    if (!department) return "All";
+    const value = department.toLowerCase();
 
-h1 {
-  text-align: center;
-  background-color: #615605;
-  color: white;
-  font-size: 30px;
-  font-family: sans-serif;
-  padding-top: 30px;
-  padding-bottom: 40px;
-  margin-left: 20px;
-  margin-right: 15px;
-  padding-right: 10px;
+    if (value.includes("engineering") || value.includes("technology") || value.includes("development")) {
+        return "IT";
+    }
+    if (value.includes("human resources") || value.includes("hr")) {
+        return "HR";
+    }
+    if (value.includes("finance") || value.includes("account")) {
+        return "Finance";
+    }
+    if (value.includes("marketing")) {
+        return "Marketing";
+    }
+    return "All";
 }
 
+// 2. Display employees dynamically
+function displayEmployees(employeesToRender) {
+    const container = document.getElementById("employees");
+    container.innerHTML = ""; // clear old content
 
-#dateTime {
-  text-align: right;
-  margin-bottom: 4px;
-  font-weight: bold;
-  background-color: #615605;
-  color: white;
-  padding-top: 15px;
-  padding-bottom: 15px;
-  margin-left: 20px;
-  margin-right: 15px;
-  padding-right: 10px;
+    if (employeesToRender.length === 0) {
+        container.innerHTML = `<h3 style="color: white; width: 100%; text-align: center;">No employees found</h3>`;
+        return;
+    }
+
+    employeesToRender.forEach(emp => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+         <img src="${emp.image}" alt="Employee">
+         <h4>${emp.name}</h4>  
+         <p>Age: ${emp.age}</p>
+         <p>Email: ${emp.email}</p>
+         <p>Department: ${emp.department}</p>
+         <p>Phone: ${emp.phone}</p>
+         <p>Salary: ₹${emp.salary}</p>
+         <button class="delete-btn">Delete</button>
+        `;
+        
+        // FIX: Synchronized delete buttons with your data engine array
+        card.querySelector(".delete-btn").addEventListener("click", () => {
+            deleteEmployee(emp.id);
+        });
+
+        container.appendChild(card);
+    });
 }
 
+// 3. Search employees
+// ========================
+function searchEmployees() {
+    const query = document.getElementById("searchInput").value.toLowerCase().trim();
 
-#searchBar {
-  text-align: center;
-  margin-bottom: 20px;
+    filteredEmployees = employees.filter((employee) => {
+        return employee.name.toLowerCase().includes(query);
+    });
+
+    displayEmployees(filteredEmployees);
+    salaryDashboard(filteredEmployees);
+    updateEmployeeCount(filteredEmployees);
 }
 
-#searchBar input {
-  padding: 15px;
-  width: 200px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
+// 4. Department Filter
+// =========================
+function filteredDepartment(dept) {
+    if (dept === "All") {
+        filteredEmployees = [...employees];
+    } else {
+      
+        filteredEmployees = employees.filter((employee) => {
+            return employee.department === dept;
+        });
+    }
+    displayEmployees(filteredEmployees);
+    salaryDashboard(filteredEmployees);
+    updateEmployeeCount(filteredEmployees);
 }
 
-#searchBar button {
-  padding: 15px 50px;
-  margin-left: 5px;
-  background: rgb(51, 178, 163);
-  color: white;
-  border-radius: 8px;
-  border: none;
-  font-weight: bold;
-  font-family: Arial, sans-serif;
-  font-size: 15px;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+// 5. Employee Count 
+// ===================
+function updateEmployeeCount(emp) {
+    document.getElementById("employeeCount").innerText = `Employee Count: ${emp.length}`;
 }
 
-#searchBar button:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 6px 14px #605e5f66;
+// 6. Add Employee
+// =======================
+function addEmployees() {
+    const name = document.getElementById("empName").value.trim();
+    const age = parseInt(document.getElementById("empAge").value);
+    const email = document.getElementById("empEmail").value.trim();
+    const dept = document.getElementById("empDept").value;
+    const salary = parseInt(document.getElementById("empSalary").value);
+    
+
+    const errorEl = document.getElementById("errorMsg");
+    if (errorEl) errorEl.innerText = "";
+
+    // employee Validation checks
+    if (name === "") {
+        if (errorEl) errorEl.innerText = "Please enter employee name";
+        return;
+    }
+    if (isNaN(age) || age <= 18) {
+        if (errorEl) errorEl.innerText = "Age must be greater than 18";
+        return;
+    }
+    if (email === "") {
+        if (errorEl) errorEl.innerText = "Please enter employee email";
+        return;
+    }
+    if (!dept || dept === "") {
+        if (errorEl) errorEl.innerText = "Please select or enter an employee department";
+        return;
+    }
+
+    const newEmp = {
+        id: Date.now(), // Unique numeric key values
+        name,
+        age,
+        email,
+        department: dept,
+        phone: "N/A",
+        image: "https://via.placeholder.com/80",
+        salary: isNaN(salary) ? 40000 : salary
+    };
+
+    // Add to Array state arrays
+    employees.push(newEmp);
+    filteredEmployees = [...employees];
+    
+    // Clear inputs and re-render dashboard viewports
+    clearForm();
+    updateEmployeeCount(filteredEmployees); 
+    displayEmployees(filteredEmployees);
+    salaryDashboard(filteredEmployees);
 }
 
-
-#departments {
-  text-align: center;
-  margin-bottom: 20px;
+// 7. DeleteEmployee
+// ========================
+function deleteEmployee(id) {
+    // Removed cleanly from arrays
+    employees = employees.filter(emp => emp.id !== id);
+    filteredEmployees = filteredEmployees.filter(emp => emp.id !== id);
+    
+    // display updated UI layout states
+    displayEmployees(filteredEmployees);
+    updateEmployeeCount(filteredEmployees);
+    salaryDashboard(filteredEmployees);
 }
 
-#departments button {
-  margin: 5px;
-  padding: 8px 12px;
-  color: white;
-  background-color: #4400f7;
-  font-weight: bold;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+// 8. Salary Dashboard
+// ==========================
+function salaryDashboard(emp) {
+    const dashboardEl = document.getElementById("salaryDashboard");
+    if (!dashboardEl) return;
+
+    if (emp.length === 0) {
+        dashboardEl.innerHTML = `
+            Total Employees: 0<br><br>
+            Total Salary: ₹0<br><br>
+            Average Salary: ₹0<br><br>
+            Highest Paid Employee: None
+        `;
+        return;
+    }
+
+    const total = emp.reduce((sum, currentEmp) => {
+        return sum + Number(currentEmp.salary);
+    }, 0);
+
+    const avg = (total / emp.length).toFixed(2);
+
+    
+    const highest = emp.reduce((a, b) => {
+        return (Number(b.salary) > Number(a.salary)) ? b : a;
+    });
+
+    dashboardEl.innerHTML = `
+        Total Employees: ${emp.length}<br><br>
+        Total Salary: ₹${total.toLocaleString('en-IN')}<br><br>
+        Average Salary: ₹${Number(avg).toLocaleString('en-IN')}<br><br>
+        Highest Paid Employee: ${highest.name} (₹${Number(highest.salary).toLocaleString('en-IN')})
+    `;
 }
 
-#departments button:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 6px 14px #605e5f66;
+// 9. Clear Form Text Fields
+function clearForm() {
+    document.getElementById("empName").value = "";
+    document.getElementById("empAge").value = "";
+    document.getElementById("empEmail").value = "";
+    document.getElementById("empDept").value = "";
+    document.getElementById("empSalary").value = "";
 }
 
+// 10. Sort employees
+function sortEmployees(type) {
+    if (filteredEmployees.length === 0) return;
 
-#employeeCount {
-  text-align: center;
-  margin-bottom: 20px;
-  font-weight: bold;
-  color: white;
+    if (type === "name") {
+        filteredEmployees.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (type === "age") {
+        filteredEmployees.sort((a, b) => a.age - b.age);
+    } else if (type === "salary") {
+        filteredEmployees.sort((a, b) => a.salary - b.salary);
+    }
+    displayEmployees(filteredEmployees);
 }
 
-
-#employees {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 20px;
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+// 11. Date and Time
+function updateDateTime() {
+    const now = new Date();
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    const dateStr = now.toLocaleDateString('en-IN', options);
+    const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    
+    document.getElementById("dateTime").innerText = `Today: ${dateStr} | Time: ${timeStr}`;
 }
 
+document.addEventListener("DOMContentLoaded", () => {
+    const searchField = document.getElementById("searchInput");
+    if (searchField) {
+        searchField.addEventListener("input", searchEmployees);
+    }
+});
 
-.card {
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  padding: 20px;
-  text-align: center;
-  box-shadow: 0 2px 5px rgba(136, 135, 135, 0.1);
-  word-wrap: break-word; 
-  overflow-wrap: break-word;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 6px 14px #8d7b8166;
-}
-
-.card img {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  margin-bottom: 10px;
-  object-fit: cover;
-  background-color: #eee;
-}
-
-.delete-btn {
-  background: red;
-  color: white;
-  border: none;
-  padding: 8px 20px;
-  cursor: pointer;
-  border-radius: 4px;
-  width: 100%;
-  margin-top: 10px;
-  font-weight: bold;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.delete-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-}
-
-
-#errorMsg {
-  color: #ff3333;
-  font-size: 14px;
-  font-weight: bold;
-  margin: 10px 0;
-}
-
-
-#addEmployee {
-  margin: 30px auto;
-  padding: 30px;
-  max-width: 500px;
-  background: white;
-  text-align: center;
-  border-radius: 8px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
-
-#addEmployee h3 {
-  margin-bottom: 20px;
-  color: #37474f;
-}
-
-
-#addEmployee input,
-#addEmployee select {
-  margin: 10px 0;
-  padding: 12px;
-  width: 100%;
-  box-sizing: border-box;
-  color: #37474f;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  text-align: left;
-  font-size: 14px;
-}
-
-#addEmployee button {
-  margin-top: 20px;
-  padding: 15px 50px;
-  background-color: #4400f7;
-  border: none;
-  color: white;
-  font-weight: bold;
-  border-radius: 8px;
-  width: 100%;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-
-#addEmployee button:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 14px #605e5f66;
-}
-
-
-#salaryDashboard {
-  text-align: center;
-  margin: 20px auto;
-  max-width: 600px;
-  font-weight: bold;
-  color: white;
-}
-
-
-#sortButtons {
-  text-align: center;
-  margin-top: 20px;
-  margin-bottom: 10px;
-}
-
-#sortButtons button {
-  margin: 5px;
-  padding: 8px 12px;
-  background-color: rgb(51, 178, 163);
-  color: white;
-  border-radius: 10px;
-  border: none;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-h2 {
-  color: white;
-  font-family: Arial, sans-serif;
-  text-align: center;
-}
-
-
-@media (max-width: 600px) {
-  body {
-    margin: 10px;
-  }
-  
-  #searchBar input {
-    width: 100%;
-    margin-bottom: 10px;
-  }
-  
-  #searchBar button {
-    width: 100%;
-    margin-left: 0;
-  }
-  
-  #addEmployee {
-    margin: 20px 10px;
-    padding: 15px;
-  }
-}
+// initalisation
+updateDateTime();
+setInterval(updateDateTime, 1000); 
+fetchEmployees(); // 
